@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algorithmic Trading Simulator - Project Documentation</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1100px; margin: 0 auto; padding: 40px 24px; color: #1a1a2e; background: #f8f9fa; line-height: 1.6; }
+  h1 { color: #0f3460; border-bottom: 3px solid #e94560; padding-bottom: 12px; font-size: 2.4em; }
+  h2 { color: #16213e; margin-top: 40px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+  h3 { color: #0f3460; margin-top: 28px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+  th, td { border: 1px solid #e0e0e0; padding: 10px 14px; text-align: left; }
+  th { background: #0f3460; color: white; font-weight: 600; }
+  tr:nth-child(even) { background: #f5f7fa; }
+  .mermaid { margin: 24px 0; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; justify-content: center; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; margin: 2px; }
+  .badge-go { background: #00ADD8; color: white; }
+  .badge-ts { background: #3178C6; color: white; }
+  .badge-react { background: #61DAFB; color: #000; }
+  .badge-postgres { background: #4169E1; color: white; }
+  .badge-redis { background: #DC382D; color: white; }
+  .badge-docker { background: #2496ED; color: white; }
+  .info-box { background: #e8f4fd; border-left: 4px solid #0f3460; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+  .info-box.warn { background: #fff8e6; border-left-color: #f0a500; }
+  .section { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin: 20px 0; }
+  code { background: #eef0f4; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; font-family: 'Consolas', 'Courier New', monospace; }
+  pre { background: #1a1a2e; color: #f0f0f0; padding: 16px 20px; border-radius: 8px; overflow-x: auto; }
+  pre code { background: transparent; padding: 0; color: inherit; }
+  .emoji-icon { font-size: 1.4em; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Algorithmic Trading Simulator</h1>
+<p style="font-size: 1.15em; color: #555;">
+  A full-stack paper-trading platform with a simulated stock exchange, real-time market data, and professional trading UI.
+</p>
+
+<div style="margin: 16px 0;">
+  <span class="badge badge-go">Go 1.26</span>
+  <span class="badge badge-ts">TypeScript</span>
+  <span class="badge badge-react">React 18</span>
+  <span class="badge badge-postgres">PostgreSQL 15</span>
+  <span class="badge badge-redis">Redis 7</span>
+  <span class="badge badge-docker">Docker</span>
+</div>
+
+<!-- ============================================================ -->
+<h2>1. Overview</h2>
+<div class="section">
+<p>
+  The <strong>Algorithmic Trading Simulator</strong> simulates an entire stock exchange <strong>in-memory</strong> using Go, providing a realistic paper-trading environment. It features a concurrent matching engine with Price-Time priority, synthetic market making, noise trader simulation, Geometric Brownian Motion price generation, and real-time WebSocket streaming — all wrapped in a professional React-based trading UI.
+</p>
+<p>
+  The system simulates <strong>15 Indian stock market assets</strong> across 10 market cap segments (Large Cap, Mid Cap, Small Cap, Micro Cap/Penny, PSU, etc.) with realistic drift/volatility regime switching.
+</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>2. System Architecture</h2>
+<div class="mermaid">
+graph TB
+    subgraph Client["Client (React + TypeScript)"]
+        UI["Trading UI<br/>TradePage, OrderBook, ChartPanel"]
+        WS["WebSocket Client<br/>topic-based subscriptions"]
+        REST["REST Client<br/>auth, orders, portfolio"]
+    end
+
+    subgraph Server["Server (Go 1.26)"]
+        ROUTER["Chi Router<br/>/v1/api + /v1/ws"]
+        JWT["JWT Middleware<br/>auth/refresh"]
+        HANDLERS["REST Handlers<br/>market, orders, portfolio, watchlist"]
+        WSH["WS Handler<br/>streams via Redis Pub/Sub"]
+        ME["Matching Engine<br/>Price-Time priority<br/>buffered channels"]
+    end
+
+    subgraph Storage["Storage Layer"]
+        PG["PostgreSQL 15<br/>users, portfolios, holdings, watchlists"]
+        TSDB["TimescaleDB<br/>trades, OHLCV candles<br/>continuous aggregates 1s/5s"]
+        REDIS["Redis 7<br/>cache, Pub/Sub,<br/>order snapshots, prices"]
+    end
+
+    subgraph Sim["Simulation Layer"]
+        GBM["GBM Generator<br/>Geometric Brownian Motion"]
+        MM["Synthetic Market Maker<br/>bid/ask ladders"]
+        NT["Noise Trader<br/>retail order flow"]
+        MGR["MarketManager<br/>lifecycle + Markov regimes"]
+    end
+
+    UI -->|WSS| WS
+    UI -->|HTTP| REST
+    WS --> ROUTER
+    REST --> ROUTER
+    ROUTER --> JWT
+    JWT --> HANDLERS
+    JWT --> WSH
+    HANDLERS -->|orderStream chan| ME
+    ME --> PG
+    ME --> REDIS
+    WSH --> REDIS
+    HANDLERS --> PG
+    ME -->|tradeStream chan| TSDB
+    MGR --> GBM
+    MGR --> MM
+    MGR --> NT
+    MM -->|orderStream chan| ME
+    NT -->|orderStream chan| ME
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Data Flow</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant UI as React UI
+    participant Router as Chi Router
+    participant Engine as Matching Engine
+    participant Redis as Redis Pub/Sub
+    participant Sim as Simulation Layer
+
+    Note over UI,Sim: Order Placement Flow
+    UI->>Router: POST /v1/orders/ (JWT)
+    Router->>Engine: orderStream chan
+    Engine->>Engine: Price-Time matching
+    Engine->>Redis: Publish trade + LOB update
+    Redis-->>UI: WebSocket push (orderbook, candle, portfolio)
+
+    Note over UI,Sim: Market Data Flow
+    Sim->>Engine: Synthetic orders (every ~100ms)
+    Engine->>Redis: Publish midprice + snapshot
+    Redis-->>UI: WebSocket push (prices, candles)
+
+    Note over UI,Sim: Subscription Flow
+    UI->>Router: WSS connect /v1/ws
+    Router->>UI: Subscribe topics (orderbook:X, candles:X, portfolio:Y)
+    UI->>Redis: Subscribe via WS handler
+    Redis-->>UI: Stream updates (500ms throttle)
+</div>
+
+<!-- ============================================================ -->
+<h2>4. Tech Stack</h2>
+<div class="section">
+
+<h3>Backend (Go)</h3>
+<table>
+  <tr><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>Go 1.26</td><td>Core language; concurrent, channel-based architecture</td></tr>
+  <tr><td>Chi (go-chi/chi/v5)</td><td>HTTP router with middleware chaining</td></tr>
+  <tr><td>coder/websocket</td><td>WebSocket library</td></tr>
+  <tr><td>GORM</td><td>ORM for PostgreSQL / TimescaleDB</td></tr>
+  <tr><td>golang-jwt/jwt/v5</td><td>JWT access + refresh token authentication</td></tr>
+  <tr><td>bcrypt</td><td>Password hashing</td></tr>
+  <tr><td>Viper (spf13/viper)</td><td>YAML + env configuration</td></tr>
+  <tr><td>go-playground/validator</td><td>Request payload validation</td></tr>
+</table>
+
+<h3>Frontend (Client)</h3>
+<table>
+  <tr><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>React 18</td><td>UI framework</td></tr>
+  <tr><td>TypeScript</td><td>Type safety</td></tr>
+  <tr><td>Vite</td><td>Build tool and dev server</td></tr>
+  <tr><td>React Router DOM v7</td><td>Client-side routing</td></tr>
+  <tr><td>Tailwind CSS v3</td><td>Utility-first styling</td></tr>
+  <tr><td>Lightweight Charts</td><td>TradingView-style charting</td></tr>
+  <tr><td>Lucide React</td><td>Icons</td></tr>
+  <tr><td>react-resizable-panels</td><td>Resizable panel layouts</td></tr>
+</table>
+
+<h3>Infrastructure</h3>
+<table>
+  <tr><th>Technology</th><th>Purpose</th></tr>
+  <tr><td>PostgreSQL 15</td><td>Primary database (users, portfolios, watchlists)</td></tr>
+  <tr><td>TimescaleDB</td><td>Time-series database (trades, OHLCV candles)</td></tr>
+  <tr><td>Redis 7</td><td>Caching, Pub/Sub, real-time data distribution</td></tr>
+  <tr><td>Docker + Compose</td><td>Multi-service orchestration</td></tr>
+  <tr><td>Nginx (Alpine)</td><td>Serves built frontend in production</td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. Server Architecture</h2>
+
+<div class="mermaid">
+graph LR
+    subgraph cmd
+        MAIN["main.go<br/>entry point"]
+    end
+    
+    subgraph internal
+        ROUTER["api/router.go"]
+        MIDDLEWARE["api/middleware/jwt_middleware.go"]
+        CONFIG["config/config.go<br/>+ assets.json"]
+        DB["database/db.go"]
+        
+        subgraph HANDLERS["handlers"]
+            AUTH["auth.go"]
+            MARKET["market.go"]
+            ORDERS["orders.go"]
+            PORTFOLIO["portfolio.go"]
+            WATCHLIST["watchlist.go"]
+            WS["ws.go"]
+        end
+        
+        subgraph MATCHING["matching"]
+            ENGINE["engine.go"]
+            LOB["LOBBuilder.go"]
+            OQ["orderqueue.go"]
+            OS["orderside.go"]
+        end
+        
+        subgraph SIM["simulation"]
+            GBM_DIR["gbm/<br/>generator.go, manager.go, profile.go"]
+            NOISE["noise/<br/>agent.go, volume.go, timing.go, direction.go"]
+            SYNTH["synthetic/agent.go"]
+        end
+        
+        STORE["storage/storage.go"]
+    end
+
+    MAIN --> ROUTER
+    MAIN --> ENGINE
+    MAIN --> SIM
+    ROUTER --> MIDDLEWARE
+    ROUTER --> HANDLERS
+    HANDLERS --> DB
+    HANDLERS --> STORE
+    MIDDLEWARE --> CONFIG
+    SIM --> ENGINE
+    ENGINE --> STORE
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Matching Engine Design</h2>
+<div class="section">
+<p>The core matching engine is an <strong>in-memory, concurrent</strong> system built on Go channels:</p>
+<ul>
+  <li><strong>Buffered Channels</strong> — <code>orderStream</code> (100k buffer) decouples REST handlers from the matching goroutine</li>
+  <li><strong>Deterministic Execution</strong> — Single background goroutine processes orders sequentially, guaranteeing Price-Time priority without locks</li>
+  <li><strong>Self-Trade Prevention (STP)</strong> — Blocks trades where both parties share the same UserID</li>
+  <li><strong>Order Book Data Structures:</strong>
+    <ul>
+      <li><code>OrderSide</code> — Price levels with BST-like sorted structure</li>
+      <li><code>OrderQueue</code> — Doubly-linked list per price level (O(1) push/pop/remove)</li>
+      <li><code>OrderIndex</code> — Map from order ID to node pointer (O(1) cancel)</li>
+    </ul>
+  </li>
+  <li><strong>LOBBuilder (Shadow Book)</strong> — Event-driven LOB maintained via MarketEvent stream; emits snapshots every 1s via Redis Pub/Sub</li>
+  <li>Supports <strong>Limit</strong>, <strong>Market</strong>, and <strong>Cancel</strong> order types</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>7. Simulation Layer</h2>
+<div class="section">
+
+<h3>7.1 GBM Price Generator</h3>
+<p>Geometric Brownian Motion engine with ~100ms tick resolution. Each asset has independent drift/volatility parameters that transition through <strong>Markov states</strong>:</p>
+<table>
+  <tr><th>Parameter</th><th>States</th><th>Transition</th></tr>
+  <tr><td>Drift</td><td>Bear | Bull | Normal | Flat</td><td>Every 5–30 minutes</td></tr>
+  <tr><td>Volatility</td><td>Panic | Elevated | Normal | Quiet</td><td>Every 5–30 minutes</td></tr>
+</table>
+
+<h3>7.2 Synthetic Market Maker</h3>
+<ul>
+  <li>Places <strong>bid/ask ladders</strong> every ~100ms tick</li>
+  <li>Dynamic spread scaling based on volatility (0.3x to 3.0x)</li>
+  <li><strong>Power-law notional scaling</strong>: <code>baseConstant * price^scalingFactor</code></li>
+  <li><strong>Volatility thinning</strong> — reduces quantity when volatility is high</li>
+  <li><strong>Drift skewing</strong> — biases bid/ask quantities based on directional momentum</li>
+  <li>Operates under UserID 999999998</li>
+</ul>
+
+<h3>7.3 Noise Trader</h3>
+<ul>
+  <li>Simulates <strong>retail order flow</strong> with realistic behavior</li>
+  <li><strong>Pareto-distributed</strong> order sizes (alpha = 1.5 for heavy tails)</li>
+  <li><strong>Momentum bias</strong> via exponential moving average of price</li>
+  <li><strong>Contrarian behavior</strong> (15% chance to fade the trend)</li>
+  <li><strong>U-shaped intraday volume</strong> (high at open/close, low at midday)</li>
+  <li>70% market orders, 30% limit orders</li>
+  <li>Randomized UserIDs in range 900000000–909999999</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>8. Simulated Assets</h2>
+<table>
+  <tr><th>Symbol</th><th>Class</th><th>Start Price (INR)</th></tr>
+  <tr><td>RELIANCE</td><td>LARGE_CAP_BLUECHIP</td><td>2,950.00</td></tr>
+  <tr><td>HDFCBANK</td><td>FINANCIAL_PRIVATE</td><td>1,530.00</td></tr>
+  <tr><td>ICICIBANK</td><td>FINANCIAL_PRIVATE</td><td>1,080.00</td></tr>
+  <tr><td>TCS</td><td>IT_TECH_SERVICES</td><td>3,980.00</td></tr>
+  <tr><td>INFY</td><td>IT_TECH_SERVICES</td><td>1,490.00</td></tr>
+  <tr><td>ITC</td><td>FMCG_DEFENSIVE</td><td>430.00</td></tr>
+  <tr><td>HINDUNILVR</td><td>FMCG_DEFENSIVE</td><td>2,250.00</td></tr>
+  <tr><td>SBIN</td><td>PSU_EQUITY</td><td>760.00</td></tr>
+  <tr><td>COALINDIA</td><td>PSU_EQUITY</td><td>440.00</td></tr>
+  <tr><td>LT</td><td>INFRA_CYCLICAL</td><td>3,750.00</td></tr>
+  <tr><td>SUNPHARMA</td><td>PHARMA_HEALTHCARE</td><td>1,620.00</td></tr>
+  <tr><td>TATAELXSI</td><td>MID_CAP</td><td>7,800.00</td></tr>
+  <tr><td>CDSL</td><td>SMALL_CAP</td><td>1,950.00</td></tr>
+  <tr><td>SUZLON</td><td>MICRO_CAP_PENNY</td><td>42.50</td></tr>
+  <tr><td>IDEA</td><td>MICRO_CAP_PENNY</td><td>13.80</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>9. API Reference</h2>
+<p>Base path: <code>/v1</code></p>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+  <tr><td>POST</td><td>/auth/register</td><td>No</td><td>Create account + issue token pair</td></tr>
+  <tr><td>POST</td><td>/auth/login</td><td>No</td><td>Authenticate + issue token pair</td></tr>
+  <tr><td>POST</td><td>/auth/refresh</td><td>No</td><td>Rotate access token</td></tr>
+  <tr><td>POST</td><td>/auth/logout</td><td>No</td><td>Revoke session</td></tr>
+  <tr><td>GET</td><td>/ws</td><td>Optional</td><td>WebSocket upgrade</td></tr>
+  <tr><td>GET</td><td>/assets</td><td>No</td><td>List tradeable assets</td></tr>
+  <tr><td>GET</td><td>/marketdata/{symbol}</td><td>No</td><td>Latest price, volume, change</td></tr>
+  <tr><td>GET</td><td>/candles/{symbol}/{interval}</td><td>No</td><td>OHLCV candle history</td></tr>
+  <tr><td>POST</td><td>/orders/</td><td>Yes</td><td>Place limit/market order</td></tr>
+  <tr><td>DELETE</td><td>/orders/{id}</td><td>Yes</td><td>Cancel order</td></tr>
+  <tr><td>GET</td><td>/orders/{id}</td><td>Yes</td><td>Order status</td></tr>
+  <tr><td>GET</td><td>/orders/active</td><td>Yes</td><td>Active orders</td></tr>
+  <tr><td>GET</td><td>/orders/history</td><td>Yes</td><td>Order history</td></tr>
+  <tr><td>GET</td><td>/trades/history</td><td>Yes</td><td>Trade history</td></tr>
+  <tr><td>GET</td><td>/portfolio/history</td><td>Yes</td><td>Portfolio + holdings + trades</td></tr>
+  <tr><td>POST</td><td>/portfolio/reset</td><td>Yes</td><td>Reset to initial state</td></tr>
+  <tr><td>GET</td><td>/watchlist/</td><td>Yes</td><td>Get watchlist</td></tr>
+  <tr><td>POST</td><td>/watchlist/{symbol}</td><td>Yes</td><td>Add to watchlist</td></tr>
+  <tr><td>DELETE</td><td>/watchlist/{symbol}</td><td>Yes</td><td>Remove from watchlist</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>10. Client Architecture</h2>
+<div class="section">
+<p>The React frontend is organized into pages, panels, hooks, and context providers:</p>
+
+<h3>Pages</h3>
+<table>
+  <tr><th>Page</th><th>Route</th><th>Description</th></tr>
+  <tr><td>LandingPage</td><td>/</td><td>Public landing page</td></tr>
+  <tr><td>LoginPage</td><td>/login</td><td>User login</td></tr>
+  <tr><td>SignUpPage</td><td>/signup</td><td>User registration</td></tr>
+  <tr><td>TradePage</td><td>/trade</td><td>Main trading interface (3-panel layout)</td></tr>
+  <tr><td>MarketsPage</td><td>/markets</td><td>Markets overview</td></tr>
+  <tr><td>WatchlistPage</td><td>/watchlist</td><td>User watchlist</td></tr>
+  <tr><td>PortfolioPage</td><td>/portfolio</td><td>Portfolio details</td></tr>
+  <tr><td>AnalyticsPage</td><td>/analytics</td><td>Trading analytics</td></tr>
+  <tr><td>HistoryPage</td><td>/history</td><td>Order/trade history</td></tr>
+</table>
+
+<h3>Core Panels (TradePage)</h3>
+<ul>
+  <li><strong>OrderBook</strong> — Real-time order book display (bids/asks)</li>
+  <li><strong>ChartPanel</strong> — Lightweight Charts integration (OHLCV)</li>
+  <li><strong>OrderForm</strong> — Place/cancel limit and market orders</li>
+  <li><strong>Balances</strong> — Account balance and holdings</li>
+</ul>
+
+<h3>WebSocket Hooks</h3>
+<ul>
+  <li><code>useMarketPrices</code> — Subscribes to <code>prices:all</code></li>
+  <li><code>useOrderBook</code> — Subscribes to <code>orderbook:{symbol}</code></li>
+  <li><code>usePortfolio</code> — Subscribes to <code>portfolio:{userID}</code></li>
+  <li><code>useTrade</code> — Subscribes to <code>candles:{symbol}:{interval}</code></li>
+</ul>
+
+<h3>Layout</h3>
+<ul>
+  <li><strong>SideNav</strong> — Navigation links (Trade, Markets, Watchlist, etc.)</li>
+  <li><strong>TopNav</strong> — Symbol selector, dark mode toggle, watchlist button</li>
+  <li>3-panel resizable layout with col-resize/row-resize drag handles</li>
+  <li>Full dark mode support via Tailwind CSS</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>11. Real-Time Data Pipeline</h2>
+<div class="section">
+<p>All real-time data flows through <strong>Redis Pub/Sub</strong> channels, making the system horizontally scalable:</p>
+<table>
+  <tr><th>Channel</th><th>Content</th><th>Throttle</th></tr>
+  <tr><td><code>candles:{symbol}</code></td><td>OHLCV candle updates (1s or 5s intervals)</td><td>—</td></tr>
+  <tr><td><code>orderbook:{symbol}</code></td><td>Order book snapshots</td><td>1s</td></tr>
+  <tr><td><code>midprice:{symbol}</code></td><td>Current mid-price updates</td><td>—</td></tr>
+  <tr><td><code>prices:all</code></td><td>Aggregated price feed for all assets</td><td>500ms</td></tr>
+  <tr><td><code>trades:{symbol}</code></td><td>Recent trades (ring buffer, last 50)</td><td>—</td></tr>
+</table>
+<p>The WebSocket handler (<code>ws.go</code>) accepts topic-based subscriptions and streams from Redis to connected clients. Candle data is aggregated server-side and stored in TimescaleDB continuous aggregate views.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2>12. Deployment</h2>
+<div class="section">
+<p>The entire application runs via <strong>Docker Compose</strong> with 5 services:</p>
+<table>
+  <tr><th>Service</th><th>Container</th><th>Port</th><th>Base Image</th></tr>
+  <tr><td>client</td><td>ats_frontend</td><td>80</td><td>nginx:alpine</td></tr>
+  <tr><td>server</td><td>ats_backend</td><td>8080</td><td>golang:1.26-alpine (multi-stage)</td></tr>
+  <tr><td>postgres-primary</td><td>ats_primary_db</td><td>5432</td><td>postgres:15</td></tr>
+  <tr><td>timescaledb</td><td>ats_candlestick_db</td><td>5433</td><td>timescaledb:latest</td></tr>
+  <tr><td>redis</td><td>ats_redis</td><td>6379</td><td>redis:7</td></tr>
+</table>
+</div>
+
+<hr style="margin: 48px 0;" />
+<p style="text-align: center; color: #888; font-size: 0.9em;">
+  Generated from project at <code>D:\Fullstack\Algorithmic-Trading-Simulator</code>
+</p>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+
+</body>
+</html>

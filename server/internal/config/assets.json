@@ -1,0 +1,92 @@
+[
+  {
+    "symbol": "RELIANCE",
+    "class": "LARGE_CAP_BLUECHIP",
+    "start_price": 2950.00,
+    "isActive": true
+  },
+  {
+    "symbol": "HDFCBANK",
+    "class": "FINANCIAL_PRIVATE",
+    "start_price": 1530.00,
+    "isActive": true
+  },
+  {
+    "symbol": "ICICIBANK",
+    "class": "FINANCIAL_PRIVATE",
+    "start_price": 1080.00,
+    "isActive": true
+  },
+  {
+    "symbol": "TCS",
+    "class": "IT_TECH_SERVICES",
+    "start_price": 3980.00,
+    "isActive": true
+  },
+  {
+    "symbol": "INFY",
+    "class": "IT_TECH_SERVICES",
+    "start_price": 1490.00,
+    "isActive": true
+  },
+  {
+    "symbol": "ITC",
+    "class": "FMCG_DEFENSIVE",
+    "start_price": 430.00,
+    "isActive": true
+  },
+  {
+    "symbol": "HINDUNILVR",
+    "class": "FMCG_DEFENSIVE",
+    "start_price": 2250.00,
+    "isActive": true
+  },
+  {
+    "symbol": "SBIN",
+    "class": "PSU_EQUITY",
+    "start_price": 760.00,
+    "isActive": true
+  },
+  {
+    "symbol": "COALINDIA",
+    "class": "PSU_EQUITY",
+    "start_price": 440.00,
+    "isActive": true
+  },
+  {
+    "symbol": "LT",
+    "class": "INFRA_CYCLICAL",
+    "start_price": 3750.00,
+    "isActive": true
+  },
+  {
+    "symbol": "SUNPHARMA",
+    "class": "PHARMA_HEALTHCARE",
+    "start_price": 1620.00,
+    "isActive": true
+  },
+  {
+    "symbol": "TATAELXSI",
+    "class": "MID_CAP",
+    "start_price": 7800.00,
+    "isActive": true
+  },
+  {
+    "symbol": "CDSL",
+    "class": "SMALL_CAP",
+    "start_price": 1950.00,
+    "isActive": true
+  },
+  {
+    "symbol": "SUZLON",
+    "class": "MICRO_CAP_PENNY",
+    "start_price": 42.50,
+    "isActive": true
+  },
+  {
+    "symbol": "IDEA",
+    "class": "MICRO_CAP_PENNY",
+    "start_price": 13.80,
+    "isActive": true
+  }
+]

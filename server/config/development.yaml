@@ -1,0 +1,38 @@
+# config/development.yaml
+
+server:
+  port: 8080
+  environment: "development"
+  log_level: "debug" # Super verbose logging for local dev
+  graceful_shutdown_timeout: "10s"
+  jwt_secret: "your_super_secret_access_token_key"
+  jwt_refresh_secret: "your_super_secret_refresh_token_key"
+
+# Primary Relational Database
+# Use this for: Users, Passwords, Alert Rules, Subscriptions
+primary_db:
+  driver: "postgres"
+  host: "localhost"  # Because the Go app runs locally, pointing to the Docker exposed port
+  port: 5434
+  user: "admin"
+  name: "alerts_core_db"
+  ssl_mode: "disable" # SSL is usually disabled for local Docker dev
+  password: ""        # Keep blank! Let the .env file override this
+
+# Time-Series Database 
+# Use this strictly for: 1m, 5m, 15m, 1h Candlestick data and tick streams
+candlestick_db:
+  driver: "timescaledb" 
+  host: "localhost"
+  port: 5433         # Running on a different port in Docker to avoid clashing with the primary DB
+  user: "admin"
+  name: "market_data_db"
+  ssl_mode: "disable"
+  password: ""        # Keep blank! Let the .env file override this
+
+# Optional but highly recommended for a real-time system:
+# Use Redis for caching active prices or acting as a Pub/Sub message broker
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
